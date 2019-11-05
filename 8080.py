@@ -43,6 +43,21 @@ class v8080:
 			self.statP = True
 		return a
 
+        ##unfinished
+	def dcr(self, a):
+		
+		a = a - 1
+		if(a < 0):
+			a = 255
+			self.statAC = True
+		if(a == 0):
+			self.statZ = True
+		if(a & 0x80):
+			self.statS = True
+		if(findParity(a)):
+			self.statP = True
+		return a
+
 	def decode(self):
 
 		byteLen = 1
