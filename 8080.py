@@ -1,7 +1,7 @@
 class v8080:
 	def __init__(self):
 		self.address = 0
-		self.data = 0
+		self.data = 0x04
 		self.reset = 0
 		self.hold = 0
 		self.wait = 0
@@ -23,12 +23,25 @@ class v8080:
 		self.regSP = 0
 		self.regPC = 0
 		
-		self.statS = 0
-		self.statZ = 0
-		self.statAC = 0
-		self.statP = 0
-		self.statC = 0
-
+		self.statS = False
+		self.statZ = False
+		self.statAC = False
+		self.statP = False
+		self.statC = False
+		
+	def inr(self, a):
+		
+		a = a + 1
+		if(a > 0xFF):
+			a = 0
+			self.statAC = True
+		if(a == 0):
+			self.statZ = True
+		if(a & 0x80):
+			self.statS = True
+		if(findParity(a)):
+			self.statP = True
+		return a
 
 	def decode(self):
 
@@ -60,8 +73,11 @@ class v8080:
 				return
 			if d == 0x04:
 				cycles = 5
-				decPnt(self, '0x04 : INR B')
+				decPnt(self, '0x04 : INR')
+				self.regB = self.inr(self.regB)
+				
 				return
+			
 			if d == 0x05:
 				cycles = 5
 				decPnt(self, '0x05 : DCR B')
@@ -233,7 +249,7 @@ class v8080:
 			if d == 0x29:
 				byteLen = 1
 				cycles = 10
-				decPnt(self, '0x19 : DAD H')
+				decPnt(self, '0x29 : DAD H')
 				return
 			if d == 0x2A:
 				byteLen = 3
@@ -255,23 +271,109 @@ class v8080:
 			if d == 0x2E:
 				byteLen = 2
 				cycles = 7
-				decPnt(self, '0x1E : MVI L, d8')
+				decPnt(self, '0x2E : MVI L, d8')
 				return
 			if d == 0x2F:
 				cycles = 4
-				decPnt(self, '0x1F : CMA')
+				decPnt(self, '0x2F : CMA')
 				return
-		
+
+		########
+		# 0x3X #
+		########
+		if((d & ~0x3F) == 0):
+			if d == 0x30:
+				cycles = 4
+				decPnt(self, '0x30 : NOP')
+				return
+			if d == 0x31:
+				byteLen = 3
+				cycles = 10
+				decPnt(self, '0x31 : LXI SP, d16')
+				return
+			if d == 0x32:
+				byteLen = 3
+				cycles = 13
+				decPnt(self, '0x32 : STA a16')
+				return
+			if d == 0x33:
+				cycles = 5
+				decPnt(self, '0x33 : INX SP')
+				return
+			if d == 0x34:
+				cycles = 10
+				decPnt(self, '0x34 : INR M')
+				return
+			if d == 0x35:
+				cycles = 10
+				decPnt(self, '0x35 : DCR M')
+				return
+			if d == 0x36:
+				byteLen = 2
+				cycles = 10
+				decPnt(self, '0x36 : MVI M, d8')
+				return
+			if d == 0x37:
+				cycles = 4
+				decPnt(self, '0x37 : STC')
+				return
+			if d == 0x38:
+				cycles = 4
+				decPnt(self, '0x38 : NOP')
+				return
+			if d == 0x39:
+				byteLen = 1
+				cycles = 10
+				decPnt(self, '0x39 : DAD SP')
+				return
+			if d == 0x3A:
+				byteLen = 3
+				cycles = 13
+				decPnt(self, '0x3A : LDA a16')
+				return
+			if d == 0x3B:
+				cycles = 5
+				decPnt(self, '0x3B : DCX SP')
+				return
+			if d == 0x3C:
+				cycles = 5
+				decPnt(self, '0x3C : INR A')
+				return
+			if d == 0x3D:
+				cycles = 5
+				decPnt(self, '0x3D : DCR A')
+				return
+			if d == 0x3E:
+				byteLen = 2
+				cycles = 7
+				decPnt(self, '0x3E : MVI A, d8')
+				return
+			if d == 0x3F:
+				cycles = 4
+				decPnt(self, '0x3F : CMC')
+				return
+			
 		
 
 #print hex address of cpu with the corresponding code
 def decPnt(cpu, str):
 	print(hex(cpu.address) + '; ' + str)
 	return
+
+#https://www.geeksforgeeks.org/finding-the-parity-of-a-number-efficiently/
+def findParity(x):
+	y = x ^ (x >> 1); 
+	y = y ^ (y >> 2) 
+	y = y ^ (y >> 4) 
+	y = y ^ (y >> 8) 
+	y = y ^ (y >> 16)
+
+	if (y & 1): 
+		return 1 
+	return 0; 
 	
 def main():
 	cpu = v8080()
 	cpu.decode()
-
-
+	print('Reg B : ' + str(cpu.regB))
 main()
