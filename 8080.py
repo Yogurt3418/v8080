@@ -28,7 +28,23 @@ class v8080:
 		self.statAC = False
 		self.statP = False
 		self.statC = False
+
+		#4K Ram
+		self.RAM = [None] * 4 * 1024
+		#8K Rom
+		self.ROM = [None] * 8 * 1024
 		
+	
+
+	def inx(self, a, b):
+		
+		c = (a<<8) | b
+		c+=1
+		a = c & 0xFF00
+		b = c & 0xFF
+		
+		return a, b
+
 	def inr(self, a):
 		
 		a = a + 1
@@ -43,7 +59,6 @@ class v8080:
 			self.statP = True
 		return a
 
-        ##unfinished
 	def dcr(self, a):
 		
 		a = a - 1
@@ -58,12 +73,36 @@ class v8080:
 			self.statP = True
 		return a
 
+	def rlc(self, a):
+		return (a << 1)|(a >> (7))
+
+	def rrc(self, a):
+		return (a >> 1)|(a << (7))
+
+	def dad(self, a, b):
+		x = (self.regH<<8) | self.regL
+		y = (a<<8) | b
+		x+=y
+		if(x>(1<<16)):
+			self.statC = True
+			
+		return (x&0xFF00), (x&0xFF)
+
+	def dcx(self, a, b):
+		c = (a<<8) | b
+		c-=1
+		a = c & 0xFF00
+		b = c & 0xFF
+		
+		return a, b
+
 	def decode(self):
 
 		byteLen = 1
 		cycles = 1
-		
-		d = self.data
+
+		#this may need to be changed later
+		d = self.RAM[self.regPC]
 
 		########
 		# 0x0X #
@@ -72,77 +111,90 @@ class v8080:
 			if d == 0x00:
 				cycles = 7
 				decPnt(self, '0x00 : NOP')
-				return
+				
 			if d == 0x01:
 				byteLen = 3
 				cycles = 10
+				self.regC = self.RAM[self.regPC+1]
+				self.regB = self.RAM[self.regPC+2]
 				decPnt(self, '0x01 : LXI B, d16')
-				return
+				
 			if d == 0x02:
 				cycles = 7
 				decPnt(self, '0x02 : STAX B')
-				return
+				
 			if d == 0x03:
 				cycles = 5
+				self.regB, self.regC = self.inx(self.regB, self.regC)
 				decPnt(self, '0x03 : INX B')
-				return
+				
 			if d == 0x04:
 				cycles = 5
-				decPnt(self, '0x04 : INR')
 				self.regB = self.inr(self.regB)
+				decPnt(self, '0x04 : INR')
 				
-				return
 			
 			if d == 0x05:
 				cycles = 5
+				self.regB = self.dcr(self.regB)
+				
 				decPnt(self, '0x05 : DCR B')
-				return
+				
 			if d == 0x06:
 				byteLen = 2
 				cycles = 7
+				self.regB = self.RAM[self.regPC+1]
 				decPnt(self, '0x06 : MVI B, d8')
-				return
+				
 			if d == 0x07:
 				byteLen = 1
 				cycles = 4
+				self.regA = self.rlc(self.regA)
 				decPnt(self, '0x07 : RLC')
-				return
+				
 			if d == 0x08:
 				byteLen = 1
 				cycles = 4
 				decPnt(self, '0x08 : NOP')
-				return
+				
 			if d == 0x09:
 				byteLen = 1
 				cycles = 10
+				self.regH, self.regL = self.dad(self.regB, self.regC)
 				decPnt(self, '0x09 : DAD B')
-				return
+				
 			if d == 0x0A:
 				byteLen = 1
 				cycles = 7
+				self.regA = self.RAM[(self.regB<<8)|self.regC]
 				decPnt(self, '0x0A : LDAX B')
-				return
+				
 			if d == 0x0B:
 				cycles = 5
+				self.regB, self.regC = self.dcx(self.regB, self.regC)
 				decPnt(self, '0x0B : DCX B')
-				return
+				
 			if d == 0x0C:
 				cycles = 5
+				self.regC = self.inr(self.regC)
 				decPnt(self, '0x0C : INR C')
-				return
+				
 			if d == 0x0D:
 				cycles = 5
+				self.regC = self.dcr(self.regC)
 				decPnt(self, '0x0D : DCR C')
-				return
+				
 			if d == 0x0E:
 				byteLen = 2
 				cycles = 7
+				self.regC = self.RAM[self.regPC+1]
 				decPnt(self, '0x0E : MVI C, d8')
-				return
+				
 			if d == 0x0F:
 				cycles = 4
+				self.regA = self.rrc(self.regA)
 				decPnt(self, '0x0F : RRC')
-				return
+				
 
 		########
 		# 0x1X #
@@ -151,72 +203,78 @@ class v8080:
 			if d == 0x10:
 				cycles = 4
 				decPnt(self, '0x10 : NOP')
-				return
+				
 			if d == 0x11:
 				byteLen = 3
 				cycles = 10
+				self.regE = self.RAM[self.regPC+1]
+				self.regD = self.RAM[self.regPC+2]
 				decPnt(self, '0x11 : LXI D, d16')
-				return
+				
 			if d == 0x12:
 				cycles = 7
 				decPnt(self, '0x12 : STAX D')
-				return
+				
 			if d == 0x13:
 				cycles = 5
+				self.regD, self.regE = self.inx(self.regD, self.regE)
 				decPnt(self, '0x13 : INX D')
-				return
+				
 			if d == 0x14:
 				cycles = 5
+				self.regD = self.inr(self.regD)
 				decPnt(self, '0x14 : INR D')
-				return
+				
 			if d == 0x15:
 				cycles = 5
+				self.regD = self.dcr(self.regD)
 				decPnt(self, '0x15 : DCR D')
-				return
+				
 			if d == 0x16:
 				byteLen = 2
 				cycles = 7
+				self.regD = self.RAM[self.regPC+1]
 				decPnt(self, '0x16 : MVI D, d8')
-				return
+				
 			if d == 0x17:
 				cycles = 4
 				decPnt(self, '0x17 : RAL')
-				return
+				
 			if d == 0x18:
 				cycles = 4
 				decPnt(self, '0x18 : NOP')
-				return
+				
 			if d == 0x19:
 				byteLen = 1
 				cycles = 10
 				decPnt(self, '0x19 : DAD D')
-				return
+				
 			if d == 0x1A:
 				byteLen = 1
 				cycles = 7
 				decPnt(self, '0x1A : LDAX D')
-				return
+				
 			if d == 0x1B:
 				cycles = 5
 				decPnt(self, '0x1B : DCX D')
-				return
+				
 			if d == 0x1C:
 				cycles = 5
 				decPnt(self, '0x1C : INR E')
-				return
+				
 			if d == 0x1D:
 				cycles = 5
 				decPnt(self, '0x1D : DCR E')
-				return
+				
 			if d == 0x1E:
 				byteLen = 2
 				cycles = 7
 				decPnt(self, '0x1E : MVI E, d8')
-				return
+				
 			if d == 0x1F:
 				cycles = 4
 				decPnt(self, '0x1F : RAR')
-				return
+				
 
 		########
 		# 0x2X #
@@ -225,73 +283,73 @@ class v8080:
 			if d == 0x20:
 				cycles = 4
 				decPnt(self, '0x20 : NOP')
-				return
+				
 			if d == 0x21:
 				byteLen = 3
 				cycles = 10
 				decPnt(self, '0x21 : LXI H, d16')
-				return
+				
 			if d == 0x22:
 				byteLen = 3
 				cycles = 16
 				decPnt(self, '0x22 : SHLD a16')
-				return
+				
 			if d == 0x23:
 				cycles = 5
 				decPnt(self, '0x23 : INX H')
-				return
+				
 			if d == 0x24:
 				cycles = 5
 				decPnt(self, '0x24 : INR H')
-				return
+				
 			if d == 0x25:
 				cycles = 5
 				decPnt(self, '0x25 : DCR H')
-				return
+				
 			if d == 0x26:
 				byteLen = 2
 				cycles = 7
 				decPnt(self, '0x26 : MVI H, d8')
-				return
+				
 			if d == 0x27:
 				cycles = 4
 				decPnt(self, '0x27 : DAA')
-				return
+				
 			if d == 0x28:
 				cycles = 4
 				decPnt(self, '0x28 : NOP')
-				return
+				
 			if d == 0x29:
 				byteLen = 1
 				cycles = 10
 				decPnt(self, '0x29 : DAD H')
-				return
+				
 			if d == 0x2A:
 				byteLen = 3
 				cycles = 16
 				decPnt(self, '0x2A : LHLD a16')
-				return
+				
 			if d == 0x2B:
 				cycles = 5
 				decPnt(self, '0x2B : DCX H')
-				return
+				
 			if d == 0x2C:
 				cycles = 5
 				decPnt(self, '0x2C : INR L')
-				return
+				
 			if d == 0x2D:
 				cycles = 5
 				decPnt(self, '0x2D : DCR L')
-				return
+				
 			if d == 0x2E:
 				byteLen = 2
 				cycles = 7
 				decPnt(self, '0x2E : MVI L, d8')
-				return
+				
 			if d == 0x2F:
 				cycles = 4
 				decPnt(self, '0x2F : CMA')
-				return
+				
 
 		########
 		# 0x3X #
@@ -300,73 +358,75 @@ class v8080:
 			if d == 0x30:
 				cycles = 4
 				decPnt(self, '0x30 : NOP')
-				return
+				
 			if d == 0x31:
 				byteLen = 3
 				cycles = 10
 				decPnt(self, '0x31 : LXI SP, d16')
-				return
+				
 			if d == 0x32:
 				byteLen = 3
 				cycles = 13
 				decPnt(self, '0x32 : STA a16')
-				return
+				
 			if d == 0x33:
 				cycles = 5
 				decPnt(self, '0x33 : INX SP')
-				return
+				
 			if d == 0x34:
 				cycles = 10
 				decPnt(self, '0x34 : INR M')
-				return
+				
 			if d == 0x35:
 				cycles = 10
 				decPnt(self, '0x35 : DCR M')
-				return
+				
 			if d == 0x36:
 				byteLen = 2
 				cycles = 10
 				decPnt(self, '0x36 : MVI M, d8')
-				return
+				
 			if d == 0x37:
 				cycles = 4
 				decPnt(self, '0x37 : STC')
-				return
+				
 			if d == 0x38:
 				cycles = 4
 				decPnt(self, '0x38 : NOP')
-				return
+				
 			if d == 0x39:
 				byteLen = 1
 				cycles = 10
 				decPnt(self, '0x39 : DAD SP')
-				return
+				
 			if d == 0x3A:
 				byteLen = 3
 				cycles = 13
 				decPnt(self, '0x3A : LDA a16')
-				return
+				
 			if d == 0x3B:
 				cycles = 5
 				decPnt(self, '0x3B : DCX SP')
-				return
+				
 			if d == 0x3C:
 				cycles = 5
 				decPnt(self, '0x3C : INR A')
-				return
+				
 			if d == 0x3D:
 				cycles = 5
 				decPnt(self, '0x3D : DCR A')
-				return
+				
 			if d == 0x3E:
 				byteLen = 2
 				cycles = 7
 				decPnt(self, '0x3E : MVI A, d8')
-				return
+				
 			if d == 0x3F:
 				cycles = 4
 				decPnt(self, '0x3F : CMC')
-				return
+
+			self.regPC+=byteLen
+			
 			
 		
 
@@ -389,6 +449,11 @@ def findParity(x):
 	
 def main():
 	cpu = v8080()
+	cpu.RAM = [0x01, 0x55, 0xAA, 0x0C]
+	print(str(cpu.regB) + ' : reg B, ' + str(cpu.regC) + ' : reg C')
 	cpu.decode()
-	print('Reg B : ' + str(cpu.regB))
+	print(str(cpu.regB) + ' : reg B, ' + str(cpu.regC) + ' : reg C')
+	cpu.decode()
+	print(str(cpu.regB) + ' : reg B, ' + str(cpu.regC) + ' : reg C')
+
 main()
