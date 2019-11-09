@@ -636,6 +636,91 @@ class v8080:
 				self.regE = self.regA
 				decPnt(self, '0x5F : MOV E, A')
 
+
+		########
+		# 0x6X #
+		########
+		if((d & ~0x6F) == 0):
+			if d == 0x60:
+				cycles = 5
+				self.regH = self.regB
+				decPnt(self, '0x60 : MOV H, B')
+				
+			if d == 0x61:
+				cycles = 5
+                                self.regH = self.regC
+				decPnt(self, '0x61 : MOV H, C')
+				
+			if d == 0x62:
+				cycles = 5
+				self.regH = self.regD
+				decPnt(self, '0x62 : MOV H, D')
+				
+			if d == 0x63:
+				cycles = 5
+				self.regH = self.regE
+				decPnt(self, '0x63 : MOV H, E')
+				
+			if d == 0x64:
+				cycles = 5
+				self.regH = self.regH
+				decPnt(self, '0x64 : MOV H, H')
+				
+			if d == 0x65:
+				cycles = 5
+				self.regH = self.regL
+				decPnt(self, '0x65 : MOV H, L')
+				
+			if d == 0x66:
+				cycles = 7
+				self.regH = self.RAM[(self.regH<<8) | self.regL]
+				decPnt(self, '0x66 : MOV H, M')
+				
+			if d == 0x67:
+				cycles = 5
+				self.regH = self.regA
+				decPnt(self, '0x67 : MOV H, A')
+				
+			if d == 0x68:
+				cycles = 5
+				self.regL = self.regB
+				decPnt(self, '0x68 : MOV L, B')
+				
+			if d == 0x69:
+				cycles = 5
+				self.regL = self.regC
+				decPnt(self, '0x69 : MOV L, C')
+				
+			if d == 0x6A:
+				cycles = 5
+				self.regL = self.regD
+				decPnt(self, '0x6A : MOV L, D')
+				
+			if d == 0x6B:
+				cycles = 5
+				self.regL = self.regE
+				decPnt(self, '0x6B : MOV L, E')
+				
+			if d == 0x6C:
+				cycles = 5
+				self.regL = self.regH
+				decPnt(self, '0x6C : MOV L, H')
+				
+			if d == 0x6D:
+				cycles = 5
+				self.regL = self.regL
+				decPnt(self, '0x6D : MOV L, L')
+				
+			if d == 0x6E:
+				cycles = 7
+				self.regL = self.RAM[(self.regH<<8) | self.regL]
+				decPnt(self, '0x6E : MOV L, M')
+				
+			if d == 0x6F:
+				cycles = 5
+				self.regL = self.regA
+				decPnt(self, '0x6F : MOV L, A')
+
 			self.regPC+=byteLen
 			
 			
