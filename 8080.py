@@ -466,6 +466,176 @@ class v8080:
 				##TODO
 				decPnt(self, '0x3F : CMC')
 
+                #TODO, FIX INR AND DCR? 0x34??
+		########
+		# 0x4X #
+		########
+		if((d & ~0x4F) == 0):
+			if d == 0x40:
+				cycles = 5
+				self.regB = self.regB
+				decPnt(self, '0x40 : MOV B, B')
+				
+			if d == 0x41:
+				cycles = 5
+                                self.regB = self.regC
+				decPnt(self, '0x41 : MOV B, C')
+				
+			if d == 0x42:
+				cycles = 5
+				self.regB = self.regD
+				decPnt(self, '0x42 : MOV B, D')
+				
+			if d == 0x43:
+				cycles = 5
+				self.regB = self.regE
+				decPnt(self, '0x43 : MOV B, E')
+				
+			if d == 0x44:
+				cycles = 5
+				self.regB = self.regH
+				decPnt(self, '0x44 : MOV B, H')
+				
+			if d == 0x45:
+				cycles = 5
+				self.regB = self.regL
+				decPnt(self, '0x45 : MOV B, L')
+				
+			if d == 0x46:
+				cycles = 7
+				self.regB = self.RAM[(self.regH<<8) | self.regL]
+				decPnt(self, '0x46 : MOV B, M')
+				
+			if d == 0x47:
+				cycles = 5
+				self.regB = self.regA
+				decPnt(self, '0x47 : MOV B, A')
+				
+			if d == 0x48:
+				cycles = 5
+				self.regC = self.regB
+				decPnt(self, '0x48 : MOV C, B')
+				
+			if d == 0x49:
+				cycles = 5
+				self.regC = self.regC
+				decPnt(self, '0x49 : MOV C, C')
+				
+			if d == 0x4A:
+				cycles = 5
+				self.regC = self.regD
+				decPnt(self, '0x4A : MOV C, D')
+				
+			if d == 0x4B:
+				cycles = 5
+				self.regC = self.regE
+				decPnt(self, '0x4B : MOV C, E')
+				
+			if d == 0x4C:
+				cycles = 5
+				self.regC = self.regH
+				decPnt(self, '0x4C : MOV C, H')
+				
+			if d == 0x4D:
+				cycles = 5
+				self.regC = self.regL
+				decPnt(self, '0x4D : MOV C, L')
+				
+			if d == 0x4E:
+				cycles = 7
+				self.regC = self.RAM[(self.regH<<8) | self.regL]
+				decPnt(self, '0x4E : MOV C, M')
+				
+			if d == 0x4F:
+				cycles = 5
+				self.regC = self.regA
+				decPnt(self, '0x4F : MOV C, A')
+
+
+		########
+		# 0x5X #
+		########
+		if((d & ~0x5F) == 0):
+			if d == 0x50:
+				cycles = 5
+				self.regD = self.regB
+				decPnt(self, '0x50 : MOV D, B')
+				
+			if d == 0x51:
+				cycles = 5
+                                self.regD = self.regC
+				decPnt(self, '0x51 : MOV D, C')
+				
+			if d == 0x52:
+				cycles = 5
+				self.regD = self.regD
+				decPnt(self, '0x52 : MOV D, D')
+				
+			if d == 0x53:
+				cycles = 5
+				self.regD = self.regE
+				decPnt(self, '0x53 : MOV D, E')
+				
+			if d == 0x54:
+				cycles = 5
+				self.regD = self.regH
+				decPnt(self, '0x54 : MOV D, H')
+				
+			if d == 0x55:
+				cycles = 5
+				self.regD = self.regL
+				decPnt(self, '0x55 : MOV D, L')
+				
+			if d == 0x56:
+				cycles = 7
+				self.regD = self.RAM[(self.regH<<8) | self.regL]
+				decPnt(self, '0x56 : MOV D, M')
+				
+			if d == 0x57:
+				cycles = 5
+				self.regD = self.regA
+				decPnt(self, '0x57 : MOV D, A')
+				
+			if d == 0x58:
+				cycles = 5
+				self.regE = self.regB
+				decPnt(self, '0x58 : MOV E, B')
+				
+			if d == 0x59:
+				cycles = 5
+				self.regE = self.regC
+				decPnt(self, '0x59 : MOV E, C')
+				
+			if d == 0x5A:
+				cycles = 5
+				self.regE = self.regD
+				decPnt(self, '0x5A : MOV E, D')
+				
+			if d == 0x5B:
+				cycles = 5
+				self.regE = self.regE
+				decPnt(self, '0x5B : MOV E, E')
+				
+			if d == 0x5C:
+				cycles = 5
+				self.regE = self.regH
+				decPnt(self, '0x5C : MOV E, H')
+				
+			if d == 0x5D:
+				cycles = 5
+				self.regE = self.regL
+				decPnt(self, '0x5D : MOV E, L')
+				
+			if d == 0x5E:
+				cycles = 7
+				self.regE = self.RAM[(self.regH<<8) | self.regL]
+				decPnt(self, '0x5E : MOV E, M')
+				
+			if d == 0x5F:
+				cycles = 5
+				self.regE = self.regA
+				decPnt(self, '0x5F : MOV E, A')
+
 			self.regPC+=byteLen
 			
 			
