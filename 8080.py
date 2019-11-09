@@ -1,7 +1,7 @@
 class v8080:
 	def __init__(self):
 		self.address = 0
-		self.data = 0x04
+		self.data = 0
 		self.reset = 0
 		self.hold = 0
 		self.wait = 0
@@ -20,7 +20,8 @@ class v8080:
 		self.regD = 0
 		self.regH = 0
 		self.regL = 0
-		self.regSP = 0
+		self.regSPL = 0
+		self.regSPH = 0
 		self.regPC = 0
 		
 		self.statS = False
@@ -29,10 +30,10 @@ class v8080:
 		self.statP = False
 		self.statC = False
 
-		#4K Ram
-		self.RAM = [None] * 4 * 1024
+		#4K Ram, basing this off the space invaders cabinet
+		self.RAM = [None] * 0x3FFF
 		#8K Rom
-		self.ROM = [None] * 8 * 1024
+		#self.ROM = [None] * 8 * 1024
 		
 	
 
@@ -121,6 +122,7 @@ class v8080:
 				
 			if d == 0x02:
 				cycles = 7
+				self.RAM[(self.regB<<8)|self.regC] = self.regA
 				decPnt(self, '0x02 : STAX B')
 				
 			if d == 0x03:
@@ -132,12 +134,10 @@ class v8080:
 				cycles = 5
 				self.regB = self.inr(self.regB)
 				decPnt(self, '0x04 : INR')
-				
 			
 			if d == 0x05:
 				cycles = 5
 				self.regB = self.dcr(self.regB)
-				
 				decPnt(self, '0x05 : DCR B')
 				
 			if d == 0x06:
@@ -213,6 +213,7 @@ class v8080:
 				
 			if d == 0x12:
 				cycles = 7
+				self.RAM[(self.regD<<8)|(self.regE)] = self.regA
 				decPnt(self, '0x12 : STAX D')
 				
 			if d == 0x13:
@@ -238,6 +239,7 @@ class v8080:
 				
 			if d == 0x17:
 				cycles = 4
+				##TODO
 				decPnt(self, '0x17 : RAL')
 				
 			if d == 0x18:
@@ -247,32 +249,39 @@ class v8080:
 			if d == 0x19:
 				byteLen = 1
 				cycles = 10
+				self.regH, self.regL = self.dad(self.regD, self.regE)
 				decPnt(self, '0x19 : DAD D')
 				
 			if d == 0x1A:
 				byteLen = 1
 				cycles = 7
+				self.regA = self.RAM[(self.regD<<8)|self.regE]
 				decPnt(self, '0x1A : LDAX D')
 				
 			if d == 0x1B:
 				cycles = 5
+				self.regD, self.regE = self.dcx(self.regD, self.regE)
 				decPnt(self, '0x1B : DCX D')
 				
 			if d == 0x1C:
 				cycles = 5
+				self.regE = self.inr(self.regE)
 				decPnt(self, '0x1C : INR E')
 				
 			if d == 0x1D:
 				cycles = 5
+				self.regE = self.dcr(self.regE)
 				decPnt(self, '0x1D : DCR E')
 				
 			if d == 0x1E:
 				byteLen = 2
 				cycles = 7
+				self.regE = self.RAM[self.regPC+1]
 				decPnt(self, '0x1E : MVI E, d8')
 				
 			if d == 0x1F:
 				cycles = 4
+				self.regA = self.rar(self.regA)
 				decPnt(self, '0x1F : RAR')
 				
 
@@ -287,32 +296,41 @@ class v8080:
 			if d == 0x21:
 				byteLen = 3
 				cycles = 10
+				self.regL = self.RAM[self.regPC+1]
+				self.regH = self.RAM[self.regPC+2]
 				decPnt(self, '0x21 : LXI H, d16')
 				
 			if d == 0x22:
 				byteLen = 3
 				cycles = 16
+				self.RAM[self.RAM[self.regPC+1]] = self.regL
+				self.RAM[self.RAM[self.regPC+2]] = self.regH
 				decPnt(self, '0x22 : SHLD a16')
 				
 			if d == 0x23:
 				cycles = 5
+				self.regH, self.regL = self.inx(self.regH, self.regL)
 				decPnt(self, '0x23 : INX H')
 				
 			if d == 0x24:
 				cycles = 5
+				self.regH = self.inr(self.regH)
 				decPnt(self, '0x24 : INR H')
 				
 			if d == 0x25:
 				cycles = 5
+				self.regH = self.dcr(self.regH)
 				decPnt(self, '0x25 : DCR H')
 				
 			if d == 0x26:
 				byteLen = 2
 				cycles = 7
+				self.regH = self.RAM[self.regPC+1]
 				decPnt(self, '0x26 : MVI H, d8')
 				
 			if d == 0x27:
 				cycles = 4
+				##TODO? 
 				decPnt(self, '0x27 : DAA')
 				
 			if d == 0x28:
@@ -322,32 +340,40 @@ class v8080:
 			if d == 0x29:
 				byteLen = 1
 				cycles = 10
+				self.regH, self.regL = self.dad(self.regH, self.regL)
 				decPnt(self, '0x29 : DAD H')
 				
 			if d == 0x2A:
 				byteLen = 3
 				cycles = 16
+				self.regL = self.RAM[self.regPC+1]
+				self.regH = self.RAM[self.regPC+2]
 				decPnt(self, '0x2A : LHLD a16')
 				
 			if d == 0x2B:
 				cycles = 5
+				self.regH, self.regL = self.dcx(self.regH, self.regL)
 				decPnt(self, '0x2B : DCX H')
 				
 			if d == 0x2C:
 				cycles = 5
+				self.regL = self.inr(self.regL)
 				decPnt(self, '0x2C : INR L')
 				
 			if d == 0x2D:
 				cycles = 5
+				self.regL = self.dcr(self.regL)
 				decPnt(self, '0x2D : DCR L')
 				
 			if d == 0x2E:
 				byteLen = 2
 				cycles = 7
+				self.regL = self.RAM[self.regPC+1]
 				decPnt(self, '0x2E : MVI L, d8')
 				
 			if d == 0x2F:
 				cycles = 4
+				#TODO NOT A
 				decPnt(self, '0x2F : CMA')
 				
 
@@ -362,32 +388,40 @@ class v8080:
 			if d == 0x31:
 				byteLen = 3
 				cycles = 10
+				self.regSPL = self.RAM[self.regPC+1]
+				self.regSPH = self.RAM[self.regPC+2]
 				decPnt(self, '0x31 : LXI SP, d16')
 				
 			if d == 0x32:
 				byteLen = 3
 				cycles = 13
+				self.RAM[(self.regPC+1)<<8 | self.regPC+2] = self.regA
 				decPnt(self, '0x32 : STA a16')
 				
 			if d == 0x33:
 				cycles = 5
+				self.regSPH, self.regSPL = self.inx(self.regSPH, self.regSPL)
 				decPnt(self, '0x33 : INX SP')
 				
 			if d == 0x34:
 				cycles = 10
+				self.regH, self.regL = self.inr(self.regH, self.regL)
 				decPnt(self, '0x34 : INR M')
 				
 			if d == 0x35:
 				cycles = 10
+				self.regH, self.regL = self.dcr(self.regH, self.regL)
 				decPnt(self, '0x35 : DCR M')
 				
 			if d == 0x36:
 				byteLen = 2
 				cycles = 10
+				self.regL = self.RAM[self.regPC+1]
 				decPnt(self, '0x36 : MVI M, d8')
 				
 			if d == 0x37:
 				cycles = 4
+				self.statC = True
 				decPnt(self, '0x37 : STC')
 				
 			if d == 0x38:
@@ -397,32 +431,39 @@ class v8080:
 			if d == 0x39:
 				byteLen = 1
 				cycles = 10
+				self.regH, self.regL = self.dad(self.regSPH, self.regSPL)
 				decPnt(self, '0x39 : DAD SP')
 				
 			if d == 0x3A:
 				byteLen = 3
 				cycles = 13
+				self.regA = self.RAM[(self.RAM[self.regPC+1]<<8) | self.RAM[self.regPC+2]]
 				decPnt(self, '0x3A : LDA a16')
 				
 			if d == 0x3B:
 				cycles = 5
+				self.regSPH, self.regSPL = self.dcx(self.regSPH, self.regSPL)
 				decPnt(self, '0x3B : DCX SP')
 				
 			if d == 0x3C:
 				cycles = 5
+				self.regA = self.inr(self.regA)
 				decPnt(self, '0x3C : INR A')
 				
 			if d == 0x3D:
 				cycles = 5
+				self.regA = self.dcr(self.regA)
 				decPnt(self, '0x3D : DCR A')
 				
 			if d == 0x3E:
 				byteLen = 2
 				cycles = 7
+				self.regA = self.RAM[self.regPC+1]
 				decPnt(self, '0x3E : MVI A, d8')
 				
 			if d == 0x3F:
 				cycles = 4
+				##TODO
 				decPnt(self, '0x3F : CMC')
 
 			self.regPC+=byteLen
