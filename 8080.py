@@ -18,6 +18,7 @@ class v8080:
 		self.regB = 0
 		self.regC = 0
 		self.regD = 0
+		self.regE = 0
 		self.regH = 0
 		self.regL = 0
 		self.regSPL = 0
@@ -35,7 +36,20 @@ class v8080:
 		#8K Rom
 		#self.ROM = [None] * 8 * 1024
 		
-	
+	def regDump(self):
+		print('****CPU REGs****')
+		print('REG A   : ' + str(hex(self.regA)))
+		print('REG B   : ' + str(hex(self.regB)))
+		print('REG C   : ' + str(hex(self.regC)))
+		print('REG D   : ' + str(hex(self.regD)))
+		print('REG E   : ' + str(hex(self.regE)))
+		print('REG H   : ' + str(hex(self.regH)))
+		print('REG L   : ' + str(hex(self.regL)))
+		print('REG SPL : ' + str(hex(self.regSPL)))
+		print('REG SPH : ' + str(hex(self.regSPH)))
+		print('REG PC  : ' + str(hex(self.regPC)))
+		print('****END REGs****')
+		return
 
 	def inx(self, a, b):
 		
@@ -96,6 +110,60 @@ class v8080:
 		b = c & 0xFF
 		
 		return a, b
+
+	##I have yet to really test these so IDK if they work right
+	def add(self, v):
+		v = self.regA + v
+		if(v>256):
+			self.statC = True
+		if(v == 0):
+			self.statZ = True
+		if(findParity(v)):
+			self.statP = True
+		if(a & 0x80):
+			self.statS = True
+		#TODO: Set AC Flag?
+		return v
+
+	def adc(self, v):
+		v = self.regA + v + (int)(self.statC)
+		if(v>256):
+			self.statC = True
+		if(v == 0):
+			self.statZ = True
+		if(findParity(v)):
+			self.statP = True
+		if(a & 0x80):
+			self.statS = True
+		#TODO: Set AC Flag?
+		return v
+
+	def sub(self, v):
+		v = self.regA - v
+		if(v>256):
+			self.statC = True
+		if(v == 0):
+			self.statZ = True
+		if(findParity(v)):
+			self.statP = True
+		if(a & 0x80):
+			self.statS = True
+		#TODO: Set AC Flag?
+		return v
+
+	def sbb(self, v):
+		v = self.regA - v - (int)(self.statC)
+		if(v>256):
+			self.statC = True
+		if(v == 0):
+			self.statZ = True
+		if(findParity(v)):
+			self.statP = True
+		if(a & 0x80):
+			self.statS = True
+		#TODO: Set AC Flag?
+		return v
+		
 
 	def decode(self):
 
@@ -466,7 +534,7 @@ class v8080:
 				##TODO
 				decPnt(self, '0x3F : CMC')
 
-                #TODO, FIX INR AND DCR? 0x34??
+		#TODO, FIX INR AND DCR? 0x34??
 		########
 		# 0x4X #
 		########
@@ -478,7 +546,7 @@ class v8080:
 				
 			if d == 0x41:
 				cycles = 5
-                                self.regB = self.regC
+				self.regB = self.regC
 				decPnt(self, '0x41 : MOV B, C')
 				
 			if d == 0x42:
@@ -563,7 +631,7 @@ class v8080:
 				
 			if d == 0x51:
 				cycles = 5
-                                self.regD = self.regC
+				self.regD = self.regC
 				decPnt(self, '0x51 : MOV D, C')
 				
 			if d == 0x52:
@@ -648,7 +716,7 @@ class v8080:
 				
 			if d == 0x61:
 				cycles = 5
-                                self.regH = self.regC
+				self.regH = self.regC
 				decPnt(self, '0x61 : MOV H, C')
 				
 			if d == 0x62:
@@ -721,6 +789,262 @@ class v8080:
 				self.regL = self.regA
 				decPnt(self, '0x6F : MOV L, A')
 
+
+		########
+		# 0x7X #
+		########
+		if((d & ~0x7F) == 0):
+			if d == 0x70:
+				cycles = 7
+				self.RAM[(self.regH<<8) | self.regL] = self.regB
+				decPnt(self, '0x70 : MOV M, B')
+				
+			if d == 0x71:
+				cycles = 7
+				self.RAM[(self.regH<<8) | self.regL] = self.regC
+				decPnt(self, '0x71 : MOV M, C')
+				
+			if d == 0x72:
+				cycles = 7
+				self.RAM[(self.regH<<8) | self.regL] = self.regD
+				decPnt(self, '0x72 : MOV M, D')
+				
+			if d == 0x73:
+				cycles = 7
+				self.RAM[(self.regH<<8) | self.regL] = self.regE
+				decPnt(self, '0x73 : MOV M, E')
+				
+			if d == 0x74:
+				cycles = 7
+				self.RAM[(self.regH<<8) | self.regL] = self.regH
+				decPnt(self, '0x74 : MOV M, H')
+				
+			if d == 0x75:
+				cycles = 7
+				self.RAM[(self.regH<<8) | self.regL] = self.regL
+				decPnt(self, '0x75 : MOV M, L')
+				
+			if d == 0x76:
+				cycles = 7
+				##Do something?
+				decPnt(self, '0x76 : HLT')
+				
+			if d == 0x77:
+				cycles = 5
+				self.RAM[(self.regH<<8) | self.regL] = self.regA
+				decPnt(self, '0x77 : MOV M, A')
+				
+			if d == 0x78:
+				cycles = 5
+				self.regA = self.regB
+				decPnt(self, '0x78 : MOV A, B')
+				
+			if d == 0x79:
+				cycles = 5
+				self.regA = self.regC
+				decPnt(self, '0x79 : MOV A, C')
+				
+			if d == 0x7A:
+				cycles = 5
+				self.regA = self.regD
+				decPnt(self, '0x7A : MOV A, D')
+				
+			if d == 0x7B:
+				cycles = 5
+				self.regA = self.regE
+				decPnt(self, '0x7B : MOV A, E')
+				
+			if d == 0x7C:
+				cycles = 5
+				self.regA = self.regH
+				decPnt(self, '0x7C : MOV A, H')
+				
+			if d == 0x7D:
+				cycles = 5
+				self.regA = self.regL
+				decPnt(self, '0x7D : MOV A, L')
+				
+			if d == 0x7E:
+				cycles = 7
+				self.regA = self.RAM[(self.regH<<8) | self.regL]
+				decPnt(self, '0x7E : MOV A, M')
+				
+			if d == 0x7F:
+				cycles = 5
+				self.regA = self.regA
+				decPnt(self, '0xAF : MOV A, A')
+
+
+		########
+		# 0x8X #
+		########
+		if((d & ~0x8F) == 0):
+			if d == 0x80:
+				cycles = 4
+				self.regA = self.add(self.regB)
+				decPnt(self, '0x80 : ADD B')
+				
+			if d == 0x81:
+				cycles = 4
+				self.regA = self.add(self.regC)
+				decPnt(self, '0x81 : ADD C')
+				
+			if d == 0x82:
+				cycles = 4
+				self.regA = self.add(self.regD)
+				decPnt(self, '0x82 : ADD D')
+				
+			if d == 0x83:
+				cycles = 4
+				self.regA = self.add(self.regE)
+				decPnt(self, '0x83 : ADD E')
+				
+			if d == 0x84:
+				cycles = 4
+				self.regA = self.add(self.regH)
+				decPnt(self, '0x84 : ADD H')
+				
+			if d == 0x85:
+				cycles = 4
+				self.regA = self.add(self.regL)
+				decPnt(self, '0x85 : ADD L')
+				
+			if d == 0x86:
+				cycles = 4
+				self.regA = self.add(self.RAM[(self.regH<<8) | self.regL])
+				decPnt(self, '0x86 : ADD M')
+				
+			if d == 0x87:
+				cycles = 4
+				self.regA = self.add(self.regA)
+				decPnt(self, '0x87 : ADD A')
+				
+			if d == 0x88:
+				cycles = 4
+				self.regA = self.adc(self.regB)
+				decPnt(self, '0x88 : ADC B')
+				
+			if d == 0x89:
+				cycles = 4
+				self.regA = self.adc(self.regC)
+				decPnt(self, '0x89 : ADC C')
+				
+			if d == 0x8A:
+				cycles = 4
+				self.regA = self.adc(self.regD)
+				decPnt(self, '0x8A : ADC D')
+				
+			if d == 0x8B:
+				cycles = 4
+				self.regA = self.adc(self.regE)
+				decPnt(self, '0x8B : ADC E')
+				
+			if d == 0x8C:
+				cycles = 4
+				self.regA = self.adc(self.regH)
+				decPnt(self, '0x8C : ADC H')
+				
+			if d == 0x8D:
+				cycles = 4
+				self.regA = self.adc(self.regL)
+				decPnt(self, '0x8D : ADC L')
+				
+			if d == 0x8E:
+				cycles = 7
+				self.regA = self.adc(self.RAM[(self.regH<<8) | self.regL])
+				decPnt(self, '0x8E : ADC M')
+				
+			if d == 0x8F:
+				cycles = 4
+				self.regA = self.adc(self.regA)
+				decPnt(self, '0x8F : ADC A')
+
+
+		########
+		# 0x9X #
+		########
+		if((d & ~0x9F) == 0):
+			if d == 0x90:
+				cycles = 4
+				self.regA = self.sub(self.regB)
+				decPnt(self, '0x90 : SUB B')
+				
+			if d == 0x91:
+				cycles = 4
+				self.regA = self.sub(self.regC)
+				decPnt(self, '0x91 : SUB C')
+				
+			if d == 0x92:
+				cycles = 4
+				self.regA = self.sub(self.regD)
+				decPnt(self, '0x92 : SUB D')
+				
+			if d == 0x93:
+				cycles = 4
+				self.regA = self.sub(self.regE)
+				decPnt(self, '0x93 : SUB E')
+				
+			if d == 0x94:
+				cycles = 4
+				self.regA = self.sub(self.regH)
+				decPnt(self, '0x94 : SUB H')
+				
+			if d == 0x95:
+				cycles = 4
+				self.regA = self.sub(self.regL)
+				decPnt(self, '0x95 : SUB L')
+				
+			if d == 0x96:
+				cycles = 7
+				self.regA = self.sub(self.RAM[(self.regH<<8) | self.regL])
+				decPnt(self, '0x96 : SUB M')
+				
+			if d == 0x97:
+				cycles = 4
+				#this is 0, right?
+				self.regA = self.sub(self.regA)
+				decPnt(self, '0x97 : SUB A')
+				
+			if d == 0x98:
+				cycles = 4
+				self.regA = self.sbb(self.regB)
+				decPnt(self, '0x98 : SBB B')
+				
+			if d == 0x99:
+				cycles = 4
+				self.regA = self.sbb(self.regC)
+				decPnt(self, '0x99 : SBB C')
+				
+			if d == 0x9A:
+				cycles = 4
+				self.regA = self.sbb(self.regD)
+				decPnt(self, '0x9A : SBB D')
+				
+			if d == 0x9B:
+				cycles = 4
+				self.regA = self.sbb(self.regE)
+				decPnt(self, '0x9B : SBB E')
+				
+			if d == 0x9C:
+				cycles = 4
+				self.regA = self.sbb(self.regH)
+				decPnt(self, '0x9C : SBB H')
+				
+			if d == 0x9D:
+				cycles = 4
+				self.regA = self.sbb(self.regL)
+				decPnt(self, '0x9D : SBB L')
+				
+			if d == 0x9E:
+				cycles = 7
+				self.regA = self.sbb(self.RAM[(self.regH<<8) | self.regL])
+				decPnt(self, '0x9E : SBB M')
+				
+			if d == 0x9F:
+				cycles = 4
+				self.regA = self.sbb(self.regA)
+				decPnt(self, '0x9F : SBB A')
+
 			self.regPC+=byteLen
 			
 			
@@ -746,10 +1070,9 @@ def findParity(x):
 def main():
 	cpu = v8080()
 	cpu.RAM = [0x01, 0x55, 0xAA, 0x0C]
-	print(str(cpu.regB) + ' : reg B, ' + str(cpu.regC) + ' : reg C')
+	cpu.regDump()
 	cpu.decode()
-	print(str(cpu.regB) + ' : reg B, ' + str(cpu.regC) + ' : reg C')
 	cpu.decode()
-	print(str(cpu.regB) + ' : reg B, ' + str(cpu.regC) + ' : reg C')
+	cpu.regDump()
 
 main()
