@@ -120,7 +120,7 @@ class v8080:
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
-		if(a & 0x80):
+		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
 		return v
@@ -133,7 +133,7 @@ class v8080:
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
-		if(a & 0x80):
+		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
 		return v
@@ -146,7 +146,7 @@ class v8080:
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
-		if(a & 0x80):
+		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
 		return v
@@ -159,10 +159,62 @@ class v8080:
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
-		if(a & 0x80):
+		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
 		return v
+
+	def ana(self, v):
+		v = self.regA & v
+		if(v>256):
+			self.statC = True
+		if(v == 0):
+			self.statZ = True
+		if(findParity(v)):
+			self.statP = True
+		if(v & 0x80):
+			self.statS = True
+		#TODO: Set AC Flag?
+		return v
+
+	def xra(self, v):
+		v = self.regA ^ v
+		if(v>256):
+			self.statC = True
+		if(v == 0):
+			self.statZ = True
+		if(findParity(v)):
+			self.statP = True
+		if(v & 0x80):
+			self.statS = True
+		#TODO: Set AC Flag?
+		return v
+
+	def ora(self, v):
+		v = self.regA | v
+		if(v>256):
+			self.statC = True
+		if(v == 0):
+			self.statZ = True
+		if(findParity(v)):
+			self.statP = True
+		if(v & 0x80):
+			self.statS = True
+		#TODO: Set AC Flag?
+		return v
+
+	def cmp(self, v):
+		v = self.regA | v
+		if(v>256):
+			self.statC = True
+		if(v == 0):
+			self.statZ = True
+		if(findParity(v)):
+			self.statP = True
+		if(v & 0x80):
+			self.statS = True
+		#TODO: Set AC Flag?
+		return 
 		
 
 	def decode(self):
@@ -1044,6 +1096,91 @@ class v8080:
 				cycles = 4
 				self.regA = self.sbb(self.regA)
 				decPnt(self, '0x9F : SBB A')
+
+
+		########
+		# 0xAX #
+		########
+		if((d & ~0x9F) == 0):
+			if d == 0xA0:
+				cycles = 4
+				self.regA = self.ana(self.regB)
+				decPnt(self, '0xA0 : ANA B')
+				
+			if d == 0xA1:
+				cycles = 4
+				self.regA = self.ana(self.regC)
+				decPnt(self, '0xA1 : ANA C')
+				
+			if d == 0xA2:
+				cycles = 4
+				self.regA = self.ana(self.regD)
+				decPnt(self, '0xA2 : ANA D')
+				
+			if d == 0xA3:
+				cycles = 4
+				self.regA = self.ana(self.regE)
+				decPnt(self, '0xA3 : ANA E')
+				
+			if d == 0xA4:
+				cycles = 4
+				self.regA = self.ana(self.regH)
+				decPnt(self, '0xA4 : ANA H')
+				
+			if d == 0xA5:
+				cycles = 4
+				self.regA = self.ana(self.regL)
+				decPnt(self, '0xA5 : ANA L')
+				
+			if d == 0xA6:
+				cycles = 7
+				self.regA = self.ana(self.RAM[(self.regH<<8) | self.regL])
+				decPnt(self, '0xA6 : ANA M')
+				
+			if d == 0xA7:
+				cycles = 4
+				self.regA = self.ana(self.regA)
+				decPnt(self, '0xA7 : ANA A')
+				
+			if d == 0xA8:
+				cycles = 4
+				self.regA = self.xra(self.regB)
+				decPnt(self, '0xA8 : XRA B')
+				
+			if d == 0xA9:
+				cycles = 4
+				self.regA = self.xra(self.regC)
+				decPnt(self, '0xA9 : XRA C')
+				
+			if d == 0xAA:
+				cycles = 4
+				self.regA = self.xra(self.regD)
+				decPnt(self, '0xAA : XRA D')
+				
+			if d == 0xAB:
+				cycles = 4
+				self.regA = self.xra(self.regE)
+				decPnt(self, '0xAB : XRA E')
+				
+			if d == 0xAC:
+				cycles = 4
+				self.regA = self.xra(self.regH)
+				decPnt(self, '0xAC : XRA H')
+				
+			if d == 0xAD:
+				cycles = 4
+				self.regA = self.xra(self.regL)
+				decPnt(self, '0xAD : XRA L')
+				
+			if d == 0xAE:
+				cycles = 7
+				self.regA = self.xra(self.RAM[(self.regH<<8) | self.regL])
+				decPnt(self, '0xAE : XRA M')
+				
+			if d == 0xAF:
+				cycles = 4
+				self.regA = self.xra(self.regA)
+				decPnt(self, '0xAF : XRA A')
 
 			self.regPC+=byteLen
 			
