@@ -1101,7 +1101,7 @@ class v8080:
 		########
 		# 0xAX #
 		########
-		if((d & ~0x9F) == 0):
+		if((d & ~0xAF) == 0):
 			if d == 0xA0:
 				cycles = 4
 				self.regA = self.ana(self.regB)
@@ -1181,6 +1181,91 @@ class v8080:
 				cycles = 4
 				self.regA = self.xra(self.regA)
 				decPnt(self, '0xAF : XRA A')
+
+
+		########
+		# 0xBX #
+		########
+		if((d & ~0xBF) == 0):
+			if d == 0xB0:
+				cycles = 4
+				self.regA = self.ora(self.regB)
+				decPnt(self, '0xB0 : ORA B')
+				
+			if d == 0xB1:
+				cycles = 4
+				self.regA = self.ora(self.regC)
+				decPnt(self, '0xB1 : ORA C')
+				
+			if d == 0xB2:
+				cycles = 4
+				self.regA = self.ora(self.regD)
+				decPnt(self, '0xB2 : ORA D')
+				
+			if d == 0xB3:
+				cycles = 4
+				self.regA = self.ora(self.regE)
+				decPnt(self, '0xB3 : ORA E')
+				
+			if d == 0xB4:
+				cycles = 4
+				self.regA = self.ora(self.regH)
+				decPnt(self, '0xB4 : ORA H')
+				
+			if d == 0xB5:
+				cycles = 4
+				self.regA = self.ora(self.regL)
+				decPnt(self, '0xB5 : ORA L')
+				
+			if d == 0xB6:
+				cycles = 7
+				self.regA = self.ora(self.RAM[(self.regH<<8) | self.regL])
+				decPnt(self, '0xB6 : ORA M')
+				
+			if d == 0xB7:
+				cycles = 4
+				self.regA = self.ora(self.regA)
+				decPnt(self, '0xB7 : ORA A')
+				
+			if d == 0xB8:
+				cycles = 4
+				self.cmp(self.regB)
+				decPnt(self, '0xB8 : CMP B')
+				
+			if d == 0xB9:
+				cycles = 4
+				self.cmp(self.regC)
+				decPnt(self, '0xB9 : CMP C')
+				
+			if d == 0xBA:
+				cycles = 4
+				self.cmp(self.regD)
+				decPnt(self, '0xBA : CMP D')
+				
+			if d == 0xBB:
+				cycles = 4
+				self.cmp(self.regE)
+				decPnt(self, '0xBB : CMP E')
+				
+			if d == 0xBC:
+				cycles = 4
+				self.cmp(self.regH)
+				decPnt(self, '0xBC : CMP H')
+				
+			if d == 0xBD:
+				cycles = 4
+				self.cmp(self.regL)
+				decPnt(self, '0xBD : CMP L')
+				
+			if d == 0xBE:
+				cycles = 7
+				self.cmp(self.RAM[(self.regH<<8) | self.regL])
+				decPnt(self, '0xBE : CMP M')
+				
+			if d == 0xBF:
+				cycles = 4
+				self.cmp(self.regA)
+				decPnt(self, '0xBF : CMP A')
 
 			self.regPC+=byteLen
 			
