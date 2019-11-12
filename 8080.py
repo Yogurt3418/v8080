@@ -1,3 +1,5 @@
+import time
+
 class v8080:
 	def __init__(self):
 		self.address = 0
@@ -32,7 +34,7 @@ class v8080:
 		self.statC = False
 
 		#4K Ram, basing this off the space invaders cabinet
-		self.RAM = [None] * 0x3FFF
+		self.RAM = 0
 		#8K Rom
 		#self.ROM = [None] * 8 * 1024
 		
@@ -223,36 +225,63 @@ class v8080:
 		return 
 
 	def pop(self):
-                ##this is going to need some testing
-                a = self.RAM[(self.regSPH<<8)|(self.regSPL)]
-                b = self.RAM[(self.regSPH<<8)|(self.regSPL)+1]
-                c = (self.regSPH<<8) | self.regSPH
-                c = c + 2
-                self.regSPL = c & 0x00FF
-                self.regSPH = c & 0xFF00
-                return a, b
+		##this is going to need some testing
+		a = self.RAM[(self.regSPH<<8)|(self.regSPL)]
+		b = self.RAM[(self.regSPH<<8)|(self.regSPL)+1]
+		c = (self.regSPH<<8) | self.regSPH
+		c = c + 2
+		self.regSPL = c & 0x00FF
+		self.regSPH = c & 0xFF00
+		return a, b
 
-        def push(self, a, b):
-                ##so is this
-                self.RAM[(self.regSPH<<8)|(self.regSPL)-2] = a
-                self.RAM[(self.regSPH<<8)|(self.regSPL)-1] = b
-                c = (self.regSPH<<8) | self.regSPH
-                c = c - 2
-                self.regSPL = c & 0x00FF
-                self.regSPH = c & 0xFF00
-                return
+	def push(self, a, b):
+		##so is this
+		self.RAM[(self.regSPH<<8)|(self.regSPL)-2] = a
+		self.RAM[(self.regSPH<<8)|(self.regSPL)-1] = b
+		c = (self.regSPH<<8) | self.regSPH
+		c = c - 2
+		self.regSPL = c & 0x00FF
+		self.regSPH = c & 0xFF00
+		return
 
-        def call(self):
-                ##TODO
-                return
+	def call(self):
+		self.RAM[((self.regSPH<<8)|(self.regSPL))-1] = (self.regPC & 0xFF00)>>8
+		self.RAM[((self.regSPH<<8)|(self.regSPL))-2] = self.regPC & 0x00FF
+		self.regPC = (self.RAM[self.regPC+1]<<8)|(self.RAM[self.regPC+2])
+		return
 
-        def ret(self):
-                self.regPC = (self.regPC & 0xFF00) | self.RAM[(self.regSPH<<8)|(self.regSPL)]
-                self.regPC = (self.regPC & 0xFF) | (self.RAM[(self.regSPH<<8)|(self.regSPL)+1]<<8)
-                c = (self.regSPH<<8) | self.regSPH
-                c = c - 2
-                self.regSPL = c & 0x00FF
-                self.regSPH = c & 0xFF00
+	def ret(self):
+		self.regPC = (self.regPC & 0xFF00) | self.RAM[(self.regSPH<<8)|(self.regSPL)]
+		self.regPC = (self.regPC & 0xFF) | (self.RAM[(self.regSPH<<8)|(self.regSPL)+1]<<8)
+		c = (self.regSPH<<8) | self.regSPH
+		c = c - 2
+		self.regSPL = c & 0x00FF
+		self.regSPH = (c & 0xFF00)>>8
+
+	def rst(self, a):
+		self.RAM[((self.regSPH<<8)|(self.regSPL))-1] = self.regPC & 0xFF00
+		self.RAM[((self.regSPH<<8)|(self.regSPL))-2] = self.regPC & 0x00FF
+		self.regPC = a*8
+		return
+
+	def xthl(self):
+		a = self.regH
+		b = self.regL
+		self.regL = self.RAM[(self.regSPH<<8)|(self.regSPL)]
+		self.regH = self.RAM[((self.regSPH<<8)|(self.regSPL))+1]
+		self.RAM[(self.regSPH<<8)|(self.regSPL)] = b
+		self.RAM[((self.regSPH<<8)|(self.regSPL))+1] = a
+		return
+
+	def xchg(self):
+		a = self.regH
+		b = self.regL
+		self.regH = self.regD
+		self.regL = self.regE
+		self.regD = a
+		self.regE = b
+		return
+
 
 	def decode(self):
 
@@ -552,7 +581,7 @@ class v8080:
 			if d == 0x32:
 				byteLen = 3
 				cycles = 13
-				self.RAM[(self.regPC+1)<<8 | self.regPC+2] = self.regA
+				self.RAM[(((self.regPC+1)<<8) | (self.regPC+2))] = self.regA
 				decPnt(self, '0x32 : STA a16')
 				
 			if d == 0x33:
@@ -1216,7 +1245,7 @@ class v8080:
 				
 			if d == 0xAF:
 				cycles = 4
-				self.regA = self.xra(self.regA)
+				self.regA = 0
 				decPnt(self, '0xAF : XRA A')
 
 
@@ -1311,7 +1340,8 @@ class v8080:
 		if((d & ~0xCF) == 0):
 			if d == 0xC0:
 				cycles = 11
-				##Todo : Return if not zero
+				if(~self.statZ):
+					self.ret()
 				decPnt(self, '0xC0 : RNZ')
 				
 			if d == 0xC1:
@@ -1320,25 +1350,25 @@ class v8080:
 				decPnt(self, '0xC1 : POP B')
 				
 			if d == 0xC2:
-				cycles = 4
-				byteLen = 10
-				if(!self.statZ):
-                                        self.regPC = (self.RAM[self.RAM[self.regPC+1]]<<8) | (self.RAM[self.RAM[self.regPC+2]])
-                                        byteLen = 1
+				cycles = 10
+				byteLen = 3
+				if(~self.statZ):
+					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					byteLen = 0
 				decPnt(self, '0xC2 : JNZ')
 				
 			if d == 0xC3:
 				cycles = 10
 				byteLen = 3
-                                self.regPC = (self.RAM[self.RAM[self.regPC+1]]<<8) | (self.RAM[self.RAM[self.regPC+2]])
+				self.regPC = (self.RAM[self.RAM[self.regPC+1]]<<8) | (self.RAM[self.RAM[self.regPC+2]])
 				decPnt(self, '0xC3 : JMP')
 				
 			if d == 0xC4:
 				cycles = 17
 				byteLen = 3
-				if(!self.statZ):
-                                        self.call((self.RAM[self.RAM[self.regPC+1]]<<8) | (self.RAM[self.RAM[self.regPC+2]]))
-                                        byteLen = 1
+				if(~self.statZ):
+					self.call()
+					byteLen = 0
 				decPnt(self, '0xC4 : CNZ')
 				
 			if d == 0xC5:
@@ -1349,53 +1379,381 @@ class v8080:
 			if d == 0xC6:
 				cycles = 7
 				byteLen = 2
-				self.add(self, self.RAM[self.regPC+1])
+				self.add(self.RAM[self.regPC+1])
 				decPnt(self, '0xC6 : ADI')
 				
 			if d == 0xC7:
 				cycles = 11
-				self.call(0)
+				self.rst(0)
+				byteLen = 0
 				decPnt(self, '0xC7 : RST 0')
 				
 			if d == 0xC8:
 				cycles = 11
-				#TODO call RET
+				if(self.statZ):
+					self.ret()
+					byteLen = 0
 				decPnt(self, '0xC8 : RZ')
 				
 			if d == 0xC9:
 				cycles = 11
-				##TODO write RET
+				self.ret()
+				byteLen = 0
 				decPnt(self, '0xC9 : RET')
 				
 			if d == 0xCA:
-				cycles = 4
-				self.cmp(self.regD)
-				decPnt(self, '0xBA : CMP D')
+				cycles = 10
+				byteLen = 3
+				if(self.statZ):
+					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					byteLen = 0
+				decPnt(self, '0xCA : JZ')
 				
 			if d == 0xCB:
-				cycles = 4
-				self.cmp(self.regE)
-				decPnt(self, '0xBB : CMP E')
+				#another Jump, this shouldn't occur
+				decPnt(self, '0xCB : JMP; IGNORED, DNE')
 				
 			if d == 0xCC:
-				cycles = 4
-				self.cmp(self.regH)
-				decPnt(self, '0xBC : CMP H')
+				cycles = 17
+				byteLen = 3
+				if(self.statZ):
+					self.call()
+					byteLen = 0
+				decPnt(self, '0xCC : CZ')
 				
 			if d == 0xCD:
-				cycles = 4
-				self.cmp(self.regL)
-				decPnt(self, '0xBD : CMP L')
+				cycles = 17
+				self.call()
+				decPnt(self, '0xCD : CALL')
 				
 			if d == 0xCE:
 				cycles = 7
-				self.cmp(self.RAM[(self.regH<<8) | self.regL])
-				decPnt(self, '0xBE : CMP M')
+				byteLen = 2
+				self.adc(self.RAM[self.regPC+1])
+				decPnt(self, '0xCE : CMP ')
 				
 			if d == 0xCF:
+				cycles = 11
+				self.rst(1)
+				decPnt(self, '0xCF : RST 1')
+
+
+		########
+		# 0xDX #
+		########
+		if((d & ~0xDF) == 0):
+			if d == 0xD0:
+				cycles = 11
+				if(~self.statC):
+					self.ret()
+				decPnt(self, '0xD0 : RNC')
+				
+			if d == 0xD1:
+				cycles = 10
+				self.regD, self.regD = self.pop()
+				decPnt(self, '0xD1 : POP D')
+				
+			if d == 0xD2:
+				cycles = 10
+				byteLen = 3
+				if(~self.statC):
+					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					byteLen = 0
+				decPnt(self, '0xD2 : JNC')
+				
+			if d == 0xD3:
+				cycles = 10
+				byteLen = 2
+				#Write A to output port
+				decPnt(self, '0xD3 : OUT')
+				
+			if d == 0xD4:
+				cycles = 17
+				byteLen = 3
+				if(~self.statC):
+					self.call()
+					byteLen = 0
+				decPnt(self, '0xD4 : CNC')
+				
+			if d == 0xD5:
+				cycles = 11
+				self.push(self.regE, self.regD)
+				decPnt(self, '0xD5 : PUSH D')
+				
+			if d == 0xD6:
+				cycles = 7
+				byteLen = 2
+				self.sub(self.RAM[self.regPC+1])
+				decPnt(self, '0xD6 : SUI')
+				
+			if d == 0xD7:
+				cycles = 11
+				self.rst(2)
+				byteLen = 0
+				decPnt(self, '0xD7 : RST 2')
+				
+			if d == 0xD8:
+				cycles = 11
+				if(self.statC):
+					self.ret()
+					byteLen = 0
+				decPnt(self, '0xD8 : RZ')
+				
+			if d == 0xD9:
+				cycles = 11
+				self.ret()
+				byteLen = 0
+				decPnt(self, '0xD9 : RET')
+				
+			if d == 0xDA:
+				cycles = 10
+				byteLen = 3
+				if(self.statC):
+					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					byteLen = 0
+				decPnt(self, '0xDA : JC')
+				
+			if d == 0xDB:
+				#Read input on port A
+				byteLen = 2
+				cycles = 10
+				decPnt(self, '0xDB : IN; DNE')
+				
+			if d == 0xDC:
+				cycles = 17
+				byteLen = 3
+				if(self.statC):
+					self.call()
+					byteLen = 0
+				decPnt(self, '0xDC : CZ')
+				
+			if d == 0xDD:
+				cycles = 17
+				self.call()
+				decPnt(self, '0xDD : CALL')
+				
+			if d == 0xDE:
+				cycles = 7
+				byteLen = 2
+				self.sbc(self.RAM[self.regPC+1])
+				decPnt(self, '0xDE : SBI')
+				
+			if d == 0xDF:
+				cycles = 11
+				self.rst(3)
+				decPnt(self, '0xDF : RST 1')
+
+
+		########
+		# 0xEX #
+		########
+		if((d & ~0xEF) == 0):
+			if d == 0xE0:
+				cycles = 11
+				if(self.statP):
+					self.ret()
+				decPnt(self, '0xE0 : RPO')
+				
+			if d == 0xE1:
+				cycles = 10
+				self.regL, self.regH = self.pop()
+				decPnt(self, '0xE1 : POP H')
+				
+			if d == 0xE2:
+				cycles = 10
+				byteLen = 3
+				if(self.statC):
+					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					byteLen = 0
+				decPnt(self, '0xE2 : JPO')
+				
+			if d == 0xE3:
+				cycles = 18
+				byteLen = 1
+				self.xthl()
+				decPnt(self, '0xE3 : XTHL')
+				
+			if d == 0xE4:
+				cycles = 17
+				byteLen = 3
+				if(self.statP):
+					self.call()
+					byteLen = 0
+				decPnt(self, '0xE4 : CPO')
+				
+			if d == 0xE5:
+				cycles = 11
+				self.push(self.regL, self.regH)
+				decPnt(self, '0xE5 : PUSH H')
+				
+			if d == 0xE6:
+				cycles = 7
+				byteLen = 2
+				self.ana(self.RAM[self.regPC+1])
+				decPnt(self, '0xE6 : ANI')
+				
+			if d == 0xE7:
+				cycles = 11
+				self.rst(4)
+				byteLen = 0
+				decPnt(self, '0xE7 : RST 4')
+				
+			if d == 0xE8:
+				cycles = 11
+				if(~self.statP):
+					self.ret()
+					byteLen = 0
+				decPnt(self, '0xE8 : RPE')
+				
+			if d == 0xE9:
+				cycles = 11
+				self.regPC = (self.regH<<8)|(self.regL)
+				decPnt(self, '0xE9 : PCHL')
+				
+			if d == 0xEA:
+				cycles = 10
+				byteLen = 3
+				if(~self.statP):
+					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					byteLen = 0
+				decPnt(self, '0xEA : JPE')
+				
+			if d == 0xEB:
+				#Read input on port A
+				byteLen = 1
+				cycles = 5
+				self.xchg()
+				decPnt(self, '0xEB : XCHG')
+				
+			if d == 0xEC:
+				cycles = 17
+				byteLen = 3
+				if(~self.statP):
+					self.call()
+					byteLen = 0
+				decPnt(self, '0xEC : CZ')
+				
+			if d == 0xED:
+				cycles = 17
+				self.call()
+				decPnt(self, '0xED : CALL')
+				
+			if d == 0xEE:
+				cycles = 7
+				byteLen = 2
+				self.xra(self.RAM[self.regPC+1])
+				decPnt(self, '0xEE : SBI')
+				
+			if d == 0xEF:
+				cycles = 11
+				self.rst(5)
+				decPnt(self, '0xEF : RST 5')
+
+
+		########
+		# 0xFX #
+		########
+		if((d & ~0xFF) == 0):
+			if d == 0xF0:
+				cycles = 11
+				if(~self.statS):
+					self.ret()
+				decPnt(self, '0xF0 : RP')
+				
+			if d == 0xF1:
+				cycles = 10
+				##TODO POP PSW
+				decPnt(self, '0xF1 : POP PSW')
+				
+			if d == 0xF2:
+				cycles = 10
+				byteLen = 3
+				if(~self.statS):
+					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					byteLen = 0
+				decPnt(self, '0xF2 : JP')
+				
+			if d == 0xF3:
 				cycles = 4
-				self.cmp(self.regA)
-				decPnt(self, '0xBF : CMP A')
+				byteLen = 1
+				##???
+				decPnt(self, '0xF3 : DI; DNE')
+				
+			if d == 0xF4:
+				cycles = 17
+				byteLen = 3
+				if(~self.statS):
+					self.call()
+					byteLen = 0
+				decPnt(self, '0xF4 : CP')
+				
+			if d == 0xF5:
+				cycles = 11
+				##TODO PUSH PSW
+				decPnt(self, '0xF5 : PUSH PSW')
+				
+			if d == 0xF6:
+				cycles = 7
+				byteLen = 2
+				self.orr(self.RAM[self.regPC+1])
+				decPnt(self, '0xF6 : ORI')
+				
+			if d == 0xF7:
+				cycles = 11
+				self.rst(6)
+				byteLen = 0
+				decPnt(self, '0xF7 : RST 6')
+				
+			if d == 0xF8:
+				cycles = 11
+				if(self.statS):
+					self.ret()
+					byteLen = 0
+				decPnt(self, '0xF8 : RM')
+				
+			if d == 0xF9:
+				cycles = 5
+				self.regSPH = self.regH
+				self.regSPL = self.regL
+				decPnt(self, '0xF9 : SPHL')
+				
+			if d == 0xFA:
+				cycles = 10
+				byteLen = 3
+				if(self.statS):
+					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					byteLen = 0
+				decPnt(self, '0xFA : JM')
+				
+			if d == 0xFB:
+				byteLen = 1
+				cycles = 10
+				##TODO Enable Interrupts
+				decPnt(self, '0xFB : EI; DNE')
+				
+			if d == 0xFC:
+				cycles = 17
+				byteLen = 3
+				if(self.statS):
+					self.call()
+					byteLen = 0
+				decPnt(self, '0xFC : CM')
+				
+			if d == 0xFD:
+				cycles = 17
+				self.call()
+				decPnt(self, '0xFD : CALL')
+				
+			if d == 0xFE:
+				cycles = 7
+				byteLen = 2
+				self.cmp(self.RAM[self.regPC+1])
+				decPnt(self, '0xFE : CPI')
+				
+			if d == 0xFF:
+				cycles = 11
+				self.rst(7)
+				decPnt(self, '0xFF : RST 7')
 
 			self.regPC+=byteLen
 			
@@ -1404,7 +1762,7 @@ class v8080:
 
 #print hex address of cpu with the corresponding code
 def decPnt(cpu, str):
-	print(hex(cpu.address) + '; ' + str)
+	print(hex(cpu.regPC) + '; ' + str)
 	return
 
 #https://www.geeksforgeeks.org/finding-the-parity-of-a-number-efficiently/
@@ -1421,12 +1779,12 @@ def findParity(x):
 	
 def main():
 	cpu = v8080()
-	#cpu.RAM = [0x01, 0x55, 0xAA, 0x0C]
-	#cpu.regDump()
-	#cpu.decode()
-	#cpu.decode()
-	cpu.regDump()
-	cpu.xra(0xFFFF)
-	cpu.regDump()
+	f = open("merge", "rb")
+	cpu.RAM = bytearray(f.read())
+	while(1):
+		cpu.decode()
+		cpu.regDump()
+		print('\n')
+		##time.sleep(1)
 	
 main()
