@@ -5,3 +5,5 @@ invaders.e
 invaders.g
 invaders.h
 merge
+__init__.py
+invaders2.asm

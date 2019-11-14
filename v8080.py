@@ -63,7 +63,7 @@ class v8080:
 		
 		c = (a<<8) | b
 		c+=1
-		a = c & 0xFF00
+		a = (c & 0xFF00)>>8
 		b = c & 0xFF
 		
 		return a, b
@@ -102,6 +102,15 @@ class v8080:
 	def rrc(self, a):
 		return (a >> 1)|(a << (7))
 
+	def rar(self, a):
+		b = (a<<7)|(int(self.statC))
+		self.statC = (a&0x80)
+		return b
+
+	def orr(self, a):
+		self.regA = self.regA|a
+		
+
 	def dad(self, a, b):
 		x = (self.regH<<8) | self.regL
 		y = (a<<8) | b
@@ -109,12 +118,12 @@ class v8080:
 		if(x>(1<<16)):
 			self.statC = True
 			
-		return (x&0xFF00), (x&0xFF)
+		return (x&0xFF00)>>8, (x&0xFF)
 
 	def dcx(self, a, b):
 		c = (a<<8) | b
 		c-=1
-		a = c & 0xFF00
+		a = (c & 0xFF00)>>8
 		b = c & 0xFF
 		
 		return a, b
@@ -199,8 +208,9 @@ class v8080:
 		self.regA = v
 
 	def ora(self, v):
-		v = self.regA | v
-		if(v>256):
+		self.regA = self.regA | v
+		if(self.regA>256):
+			self.regA = self.regA & 0xFF
 			self.statC = True
 		if(v == 0):
 			self.statZ = True
@@ -208,8 +218,8 @@ class v8080:
 			self.statP = True
 		if(v & 0x80):
 			self.statS = True
+		self.regDump()
 		#TODO: Set AC Flag?
-		self.regA = v
 
 	def cmp(self, v):
 		v = self.regA | v
@@ -226,12 +236,13 @@ class v8080:
 
 	def pop(self):
 		##this is going to need some testing
+		self.regDump()
 		a = self.RAM[(self.regSPH<<8)|(self.regSPL)]
 		b = self.RAM[(self.regSPH<<8)|(self.regSPL)+1]
 		c = (self.regSPH<<8) | self.regSPH
 		c = c + 2
 		self.regSPL = c & 0x00FF
-		self.regSPH = c & 0xFF00
+		self.regSPH = (c & 0xFF00)>>8
 		return a, b
 
 	def push(self, a, b):
@@ -241,13 +252,13 @@ class v8080:
 		c = (self.regSPH<<8) | self.regSPH
 		c = c - 2
 		self.regSPL = c & 0x00FF
-		self.regSPH = c & 0xFF00
+		self.regSPH = (c & 0xFF00)>>8
 		return
 
 	def call(self):
-		self.RAM[((self.regSPH<<8)|(self.regSPL))-1] = (self.regPC & 0xFF00)>>8
-		self.RAM[((self.regSPH<<8)|(self.regSPL))-2] = self.regPC & 0x00FF
-		self.regPC = (self.RAM[self.regPC+1]<<8)|(self.RAM[self.regPC+2])
+		self.RAM[((self.regSPH<<8)|(self.regSPL))-1] = self.regPC & 0xFF
+		self.RAM[((self.regSPH<<8)|(self.regSPL))-2] = (self.regPC & 0xFF00)>>8
+		self.regPC = (self.RAM[self.regPC+2]<<8)|(self.RAM[self.regPC+1])
 		return
 
 	def ret(self):
@@ -259,7 +270,7 @@ class v8080:
 		self.regSPH = (c & 0xFF00)>>8
 
 	def rst(self, a):
-		self.RAM[((self.regSPH<<8)|(self.regSPL))-1] = self.regPC & 0xFF00
+		self.RAM[((self.regSPH<<8)|(self.regSPL))-1] = (self.regPC & 0xFF00)>>8
 		self.RAM[((self.regSPH<<8)|(self.regSPL))-2] = self.regPC & 0x00FF
 		self.regPC = a*8
 		return
@@ -1352,15 +1363,15 @@ class v8080:
 			if d == 0xC2:
 				cycles = 10
 				byteLen = 3
-				if(~self.statZ):
-					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+				if(self.statZ == 0):
+					self.regPC = (self.RAM[self.regPC+2]<<8) | (self.RAM[self.regPC+1])
 					byteLen = 0
 				decPnt(self, '0xC2 : JNZ')
 				
 			if d == 0xC3:
 				cycles = 10
-				byteLen = 3
-				self.regPC = (self.RAM[self.RAM[self.regPC+1]]<<8) | (self.RAM[self.RAM[self.regPC+2]])
+				byteLen = 0
+				self.regPC = (self.RAM[self.regPC+2]<<8) | (self.RAM[self.regPC+1])
 				decPnt(self, '0xC3 : JMP')
 				
 			if d == 0xC4:
@@ -1405,7 +1416,7 @@ class v8080:
 				cycles = 10
 				byteLen = 3
 				if(self.statZ):
-					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					self.regPC = (self.RAM[self.regPC+2]<<8) | (self.RAM[self.regPC+1])
 					byteLen = 0
 				decPnt(self, '0xCA : JZ')
 				
@@ -1424,6 +1435,7 @@ class v8080:
 			if d == 0xCD:
 				cycles = 17
 				self.call()
+				byteLen = 0
 				decPnt(self, '0xCD : CALL')
 				
 			if d == 0xCE:
@@ -1457,7 +1469,7 @@ class v8080:
 				cycles = 10
 				byteLen = 3
 				if(~self.statC):
-					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					self.regPC = (self.RAM[self.regPC+2]<<8) | (self.RAM[self.regPC+1])
 					byteLen = 0
 				decPnt(self, '0xD2 : JNC')
 				
@@ -1509,7 +1521,7 @@ class v8080:
 				cycles = 10
 				byteLen = 3
 				if(self.statC):
-					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					self.regPC = (self.RAM[self.regPC+2]<<8) | (self.RAM[self.regPC+1])
 					byteLen = 0
 				decPnt(self, '0xDA : JC')
 				
@@ -1563,7 +1575,7 @@ class v8080:
 				cycles = 10
 				byteLen = 3
 				if(self.statC):
-					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					self.regPC = (self.RAM[self.regPC+2]<<8) | (self.RAM[self.regPC+1])
 					byteLen = 0
 				decPnt(self, '0xE2 : JPO')
 				
@@ -1614,7 +1626,7 @@ class v8080:
 				cycles = 10
 				byteLen = 3
 				if(~self.statP):
-					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					self.regPC = (self.RAM[self.regPC+2]<<8) | (self.RAM[self.regPC+1])
 					byteLen = 0
 				decPnt(self, '0xEA : JPE')
 				
@@ -1669,7 +1681,7 @@ class v8080:
 				cycles = 10
 				byteLen = 3
 				if(~self.statS):
-					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					self.regPC = (self.RAM[self.regPC+2]<<8) | (self.RAM[self.regPC+1])
 					byteLen = 0
 				decPnt(self, '0xF2 : JP')
 				
@@ -1721,7 +1733,7 @@ class v8080:
 				cycles = 10
 				byteLen = 3
 				if(self.statS):
-					self.regPC = (self.RAM[self.regPC+1]<<8) | (self.RAM[self.regPC+2])
+					self.regPC = (self.RAM[self.regPC+2]<<8) | (self.RAM[self.regPC+1])
 					byteLen = 0
 				decPnt(self, '0xFA : JM')
 				
@@ -1777,14 +1789,14 @@ def findParity(x):
 		return 1 
 	return 0; 
 	
-def main():
-	cpu = v8080()
-	f = open("merge", "rb")
-	cpu.RAM = bytearray(f.read())
-	while(1):
-		cpu.decode()
-		cpu.regDump()
-		print('\n')
-		##time.sleep(1)
-	
-main()
+#def main():
+#	cpu = v8080()
+#	f = open("invaders2.asm", "rb")
+#	cpu.RAM = bytearray(f.read())
+#	while(1):
+#		cpu.decode()
+#		#cpu.regDump()
+#		print('\n')
+#		##time.sleep(1)
+#	
+#main()
