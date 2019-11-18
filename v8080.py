@@ -208,6 +208,7 @@ class v8080:
 		self.regA = v
 
 	def ora(self, v):
+		#print('********ORA v = ' + str(v) + '**********')
 		self.regA = self.regA | v
 		if(self.regA>256):
 			self.regA = self.regA & 0xFF
@@ -218,7 +219,7 @@ class v8080:
 			self.statP = True
 		if(v & 0x80):
 			self.statS = True
-		self.regDump()
+		#self.regDump()
 		#TODO: Set AC Flag?
 
 	def cmp(self, v):
@@ -236,10 +237,10 @@ class v8080:
 
 	def pop(self):
 		##this is going to need some testing
-		self.regDump()
+		#self.regDump()
 		a = self.RAM[(self.regSPH<<8)|(self.regSPL)]
 		b = self.RAM[(self.regSPH<<8)|(self.regSPL)+1]
-		c = (self.regSPH<<8) | self.regSPH
+		c = (self.regSPH<<8) | self.regSPL
 		c = c + 2
 		self.regSPL = c & 0x00FF
 		self.regSPH = (c & 0xFF00)>>8
@@ -249,23 +250,27 @@ class v8080:
 		##so is this
 		self.RAM[(self.regSPH<<8)|(self.regSPL)-2] = a
 		self.RAM[(self.regSPH<<8)|(self.regSPL)-1] = b
-		c = (self.regSPH<<8) | self.regSPH
+		c = (self.regSPH<<8) | self.regSPL
 		c = c - 2
 		self.regSPL = c & 0x00FF
 		self.regSPH = (c & 0xFF00)>>8
 		return
 
 	def call(self):
-		self.RAM[((self.regSPH<<8)|(self.regSPL))-1] = self.regPC & 0xFF
-		self.RAM[((self.regSPH<<8)|(self.regSPL))-2] = (self.regPC & 0xFF00)>>8
+		##this needs more testing!
+		c = (self.regSPH<<8) | self.regSPL
+		self.RAM[c-1] = (self.regPC & 0xFF00)>>8
+		self.RAM[c-2] = self.regPC & 0xFF
+		c = c - 2
 		self.regPC = (self.RAM[self.regPC+2]<<8)|(self.RAM[self.regPC+1])
+		self.regSPL = c & 0x00FF
+		self.regSPH = (c & 0xFF00)>>8
 		return
 
 	def ret(self):
-		self.regPC = (self.regPC & 0xFF00) | self.RAM[(self.regSPH<<8)|(self.regSPL)]
-		self.regPC = (self.regPC & 0xFF) | (self.RAM[(self.regSPH<<8)|(self.regSPL)+1]<<8)
-		c = (self.regSPH<<8) | self.regSPH
-		c = c - 2
+		c = (self.regSPH<<8) | self.regSPL
+		self.regPC = self.RAM[c] | (self.RAM[c+1]<<8)
+		c = c + 2
 		self.regSPL = c & 0x00FF
 		self.regSPH = (c & 0xFF00)>>8
 
@@ -960,6 +965,7 @@ class v8080:
 				
 			if d == 0x77:
 				cycles = 5
+				#self.regDump()
 				self.RAM[(self.regH<<8) | self.regL] = self.regA
 				decPnt(self, '0x77 : MOV M, A')
 				
@@ -1266,42 +1272,42 @@ class v8080:
 		if((d & ~0xBF) == 0):
 			if d == 0xB0:
 				cycles = 4
-				self.regA = self.ora(self.regB)
+				self.ora(self.regB)
 				decPnt(self, '0xB0 : ORA B')
 				
 			if d == 0xB1:
 				cycles = 4
-				self.regA = self.ora(self.regC)
+				self.ora(self.regC)
 				decPnt(self, '0xB1 : ORA C')
 				
 			if d == 0xB2:
 				cycles = 4
-				self.regA = self.ora(self.regD)
+				self.ora(self.regD)
 				decPnt(self, '0xB2 : ORA D')
 				
 			if d == 0xB3:
 				cycles = 4
-				self.regA = self.ora(self.regE)
+				self.ora(self.regE)
 				decPnt(self, '0xB3 : ORA E')
 				
 			if d == 0xB4:
 				cycles = 4
-				self.regA = self.ora(self.regH)
+				self.ora(self.regH)
 				decPnt(self, '0xB4 : ORA H')
 				
 			if d == 0xB5:
 				cycles = 4
-				self.regA = self.ora(self.regL)
+				self.ora(self.regL)
 				decPnt(self, '0xB5 : ORA L')
 				
 			if d == 0xB6:
 				cycles = 7
-				self.regA = self.ora(self.RAM[(self.regH<<8) | self.regL])
+				self.ora(self.RAM[(self.regH<<8) | self.regL])
 				decPnt(self, '0xB6 : ORA M')
 				
 			if d == 0xB7:
 				cycles = 4
-				self.regA = self.ora(self.regA)
+				self.ora(self.regA)
 				decPnt(self, '0xB7 : ORA A')
 				
 			if d == 0xB8:
@@ -1462,7 +1468,7 @@ class v8080:
 				
 			if d == 0xD1:
 				cycles = 10
-				self.regD, self.regD = self.pop()
+				self.regE, self.regD = self.pop()
 				decPnt(self, '0xD1 : POP D')
 				
 			if d == 0xD2:
