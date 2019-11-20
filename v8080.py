@@ -73,13 +73,16 @@ class v8080:
 		a = a + 1
 		if(a > 0xFF):
 			a = 0
-			self.statAC = True
+			#self.statAC = True
 		if(a == 0):
 			self.statZ = True
 		if(a & 0x80):
 			self.statS = True
 		if(findParity(a)):
 			self.statP = True
+		else:
+			self.statP = False
+			
 		return a
 
 	def dcr(self, a):
@@ -87,13 +90,16 @@ class v8080:
 		a = a - 1
 		if(a < 0):
 			a = 255
-			self.statAC = True
+			#self.statAC = True
 		if(a == 0):
 			self.statZ = True
 		if(a & 0x80):
 			self.statS = True
 		if(findParity(a)):
 			self.statP = True
+		else:
+			self.statP = False
+			
 		return a
 
 	def rlc(self, a):
@@ -104,25 +110,31 @@ class v8080:
 
 	def rar(self, a):
 		b = (a<<7)|(int(self.statC))
-		self.statC = (a&0x80)
+		self.statC = bool((a&0x80)>>7)
 		return b
 
 	def orr(self, a):
-		self.regA = self.regA|a
+		self.regA = self.regA | a
 		
 
 	def dad(self, a, b):
 		x = (self.regH<<8) | self.regL
 		y = (a<<8) | b
 		x+=y
-		if(x>(1<<16)):
+		if(x>=(1<<16)):
 			self.statC = True
+			x = 0
 			
 		return (x&0xFF00)>>8, (x&0xFF)
 
 	def dcx(self, a, b):
 		c = (a<<8) | b
-		c-=1
+		
+		if( c == 0 ):
+			c = 0xFFFF
+		else:
+			c = c - 1
+			
 		a = (c & 0xFF00)>>8
 		b = c & 0xFF
 		
@@ -133,11 +145,14 @@ class v8080:
 		v = self.regA + v
 		if(v>256):
 			self.statC = True
+			v = v & 0xFF
 		if(v == 0):
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
-		if(v & 0x80):
+		else:
+			self.statP = False
+		if((v & 0x80) > 0):
 			self.statS = True
 		#TODO: Set AC Flag?
 		self.regA = v
@@ -146,10 +161,13 @@ class v8080:
 		v = self.regA + v + (int)(self.statC)
 		if(v>256):
 			self.statC = True
+			v = v & 0xFF
 		if(v == 0):
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
+		else:
+			self.statP = False
 		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
@@ -157,12 +175,15 @@ class v8080:
 
 	def sub(self, v):
 		v = self.regA - v
-		if(v>256):
+		if(v<0):
 			self.statC = True
+			v = v & 0xFF
 		if(v == 0):
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
+		else:
+			self.statP = False
 		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
@@ -170,12 +191,15 @@ class v8080:
 
 	def sbb(self, v):
 		v = self.regA - v - (int)(self.statC)
-		if(v>256):
+		if(v<0):
 			self.statC = True
+			v = v & 0xFF
 		if(v == 0):
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
+		else:
+			self.statP = False
 		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
@@ -189,6 +213,8 @@ class v8080:
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
+		else:
+			self.statP = False
 		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
@@ -202,13 +228,14 @@ class v8080:
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
+		else:
+			self.statP = False
 		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
 		self.regA = v
 
 	def ora(self, v):
-		#print('********ORA v = ' + str(v) + '**********')
 		self.regA = self.regA | v
 		if(self.regA>256):
 			self.regA = self.regA & 0xFF
@@ -217,19 +244,23 @@ class v8080:
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
+		else:
+			self.statP = False
 		if(v & 0x80):
 			self.statS = True
-		#self.regDump()
 		#TODO: Set AC Flag?
+		return
 
 	def cmp(self, v):
-		v = self.regA | v
-		if(v>256):
+		v = self.regA - v
+		if(v<0):
 			self.statC = True
 		if(v == 0):
 			self.statZ = True
 		if(findParity(v)):
 			self.statP = True
+		else:
+                        self.statP = False
 		if(v & 0x80):
 			self.statS = True
 		#TODO: Set AC Flag?
@@ -259,8 +290,8 @@ class v8080:
 	def call(self):
 		##this needs more testing!
 		c = (self.regSPH<<8) | self.regSPL
-		self.RAM[c-1] = (self.regPC & 0xFF00)>>8
-		self.RAM[c-2] = self.regPC & 0xFF
+		self.RAM[c-1] = ((self.regPC+3) & 0xFF00)>>8
+		self.RAM[c-2] = (self.regPC+3) & 0xFF
 		c = c - 2
 		self.regPC = (self.RAM[self.regPC+2]<<8)|(self.RAM[self.regPC+1])
 		self.regSPL = c & 0x00FF
@@ -1448,7 +1479,7 @@ class v8080:
 				cycles = 7
 				byteLen = 2
 				self.adc(self.RAM[self.regPC+1])
-				decPnt(self, '0xCE : CMP ')
+				decPnt(self, '0xCE : ADC ')
 				
 			if d == 0xCF:
 				cycles = 11
