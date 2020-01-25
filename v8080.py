@@ -59,6 +59,24 @@ class v8080:
 		print('****END CPU STATS****')
 		return
 
+	def setFlagsZSP(self, a):
+		if(a == 0):
+			self.statZ = True
+		else:
+			self.statZ = False
+			
+		if((a & 0x80) != 0):
+			self.statS = True
+		else:
+			self.statS = False
+			
+		if(findParity(a)):
+			self.statP = True
+		else:
+			self.statP = False
+
+		return
+
 	def inx(self, a, b):
 		
 		c = (a<<8) | b
@@ -74,14 +92,8 @@ class v8080:
 		if(a > 0xFF):
 			a = 0
 			#self.statAC = True
-		if(a == 0):
-			self.statZ = True
-		if(a & 0x80):
-			self.statS = True
-		if(findParity(a)):
-			self.statP = True
-		else:
-			self.statP = False
+
+		self.setFlagsZSP(a)
 			
 		return a
 
@@ -91,14 +103,8 @@ class v8080:
 		if(a < 0):
 			a = 255
 			#self.statAC = True
-		if(a == 0):
-			self.statZ = True
-		if(a & 0x80):
-			self.statS = True
-		if(findParity(a)):
-			self.statP = True
-		else:
-			self.statP = False
+		
+		self.setFlagsZSP(a)
 			
 		return a
 
@@ -146,14 +152,9 @@ class v8080:
 		if(v>256):
 			self.statC = True
 			v = v & 0xFF
-		if(v == 0):
-			self.statZ = True
-		if(findParity(v)):
-			self.statP = True
-		else:
-			self.statP = False
-		if((v & 0x80) > 0):
-			self.statS = True
+			
+		self.setFlagsZSP(v)
+		
 		#TODO: Set AC Flag?
 		self.regA = v
 
@@ -162,14 +163,8 @@ class v8080:
 		if(v>256):
 			self.statC = True
 			v = v & 0xFF
-		if(v == 0):
-			self.statZ = True
-		if(findParity(v)):
-			self.statP = True
-		else:
-			self.statP = False
-		if(v & 0x80):
-			self.statS = True
+
+		self.setFlagsZSP(v)
 		#TODO: Set AC Flag?
 		self.regA = v
 
@@ -178,14 +173,8 @@ class v8080:
 		if(v<0):
 			self.statC = True
 			v = v & 0xFF
-		if(v == 0):
-			self.statZ = True
-		if(findParity(v)):
-			self.statP = True
-		else:
-			self.statP = False
-		if(v & 0x80):
-			self.statS = True
+			
+		self.setFlagsZSP(v)
 		#TODO: Set AC Flag?
 		self.regA = v
 
@@ -194,14 +183,8 @@ class v8080:
 		if(v<0):
 			self.statC = True
 			v = v & 0xFF
-		if(v == 0):
-			self.statZ = True
-		if(findParity(v)):
-			self.statP = True
-		else:
-			self.statP = False
-		if(v & 0x80):
-			self.statS = True
+
+		self.setFlagsZSP(v)
 		#TODO: Set AC Flag?
 		self.regA = v
 
@@ -209,14 +192,8 @@ class v8080:
 		v = self.regA & v
 		if(v>256):
 			self.statC = True
-		if(v == 0):
-			self.statZ = True
-		if(findParity(v)):
-			self.statP = True
-		else:
-			self.statP = False
-		if(v & 0x80):
-			self.statS = True
+
+		self.setFlagsZSP(v)
 		#TODO: Set AC Flag?
 		self.regA = v
 
@@ -224,14 +201,8 @@ class v8080:
 		v = self.regA ^ v
 		if(v>256):
 			self.statC = True
-		if(v == 0):
-			self.statZ = True
-		if(findParity(v)):
-			self.statP = True
-		else:
-			self.statP = False
-		if(v & 0x80):
-			self.statS = True
+
+		self.setFlagsZSP(v)
 		#TODO: Set AC Flag?
 		self.regA = v
 
@@ -240,14 +211,8 @@ class v8080:
 		if(self.regA>256):
 			self.regA = self.regA & 0xFF
 			self.statC = True
-		if(v == 0):
-			self.statZ = True
-		if(findParity(v)):
-			self.statP = True
-		else:
-			self.statP = False
-		if(v & 0x80):
-			self.statS = True
+
+		self.setFlagsZSP(self.regA)
 		#TODO: Set AC Flag?
 		return
 
@@ -255,14 +220,8 @@ class v8080:
 		v = self.regA - v
 		if(v<0):
 			self.statC = True
-		if(v == 0):
-			self.statZ = True
-		if(findParity(v)):
-			self.statP = True
-		else:
-                        self.statP = False
-		if(v & 0x80):
-			self.statS = True
+
+		self.setFlagsZSP(v)
 		#TODO: Set AC Flag?
 		return 
 
@@ -638,18 +597,18 @@ class v8080:
 				
 			if d == 0x34:
 				cycles = 10
-				self.regH, self.regL = self.inr(self.regH, self.regL)
+				self.RAM[(self.regH<<8) | self.regL] = self.inr(self.RAM[(self.regH<<8) | self.regL])
 				decPnt(self, '0x34 : INR M')
 				
 			if d == 0x35:
 				cycles = 10
-				self.regH, self.regL = self.dcr(self.regH, self.regL)
+				self.RAM[(self.regH<<8) | self.regL] = self.dcr(self.RAM[(self.regH<<8) | self.regL])
 				decPnt(self, '0x35 : DCR M')
 				
 			if d == 0x36:
 				byteLen = 2
 				cycles = 10
-				self.regL = self.RAM[self.regPC+1]
+				self.RAM[(self.regH<<8) | self.regL] = self.RAM[self.regPC+1]
 				decPnt(self, '0x36 : MVI M, d8')
 				
 			if d == 0x37:
@@ -1739,7 +1698,7 @@ class v8080:
 			if d == 0xF5:
 				cycles = 11
 				##TODO PUSH PSW
-				decPnt(self, '0xF5 : PUSH PSW')
+				decPnt(self, '0xF5 : PUSH PSW  *unimplemented*')
 				
 			if d == 0xF6:
 				cycles = 7
@@ -1778,7 +1737,7 @@ class v8080:
 				byteLen = 1
 				cycles = 10
 				##TODO Enable Interrupts
-				decPnt(self, '0xFB : EI; DNE')
+				decPnt(self, '0xFB : EI; DNE  *not implemented*')
 				
 			if d == 0xFC:
 				cycles = 17
@@ -1814,7 +1773,7 @@ def decPnt(cpu, str):
 	print(hex(cpu.regPC) + '; ' + str)
 	return
 
-#https://www.geeksforgeeks.org/finding-the-parity-of-a-number-efficiently/
+#get parity of number
 def findParity(x):
 	y = x ^ (x >> 1); 
 	y = y ^ (y >> 2) 
